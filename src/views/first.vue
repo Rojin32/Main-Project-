@@ -86,15 +86,17 @@ const router = useRouter();
 const handleSubmit = async () => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value);
+    console.log(userCredential)
     const user = userCredential.user;
-
+    console.log(user);
+    
     // Check if user exists in Firestore
     const userDoc = await getDoc(doc(collection(db, 'UserDetailes'), user.uid));
 
     if (userDoc.exists() && userDoc.data().username) {
       router.push('/first'); 
     } else {
-      router.push('/user'); 
+      router.push('/first'); 
     }
   } catch (err) {
     switch (err.code) {
