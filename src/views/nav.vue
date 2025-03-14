@@ -11,9 +11,19 @@
           <a href="https://www.profile.com">
             <img src="../../public/notification.png" alt="Notification Icon" class="h-5 w-5" />
           </a>
-          <a href="https://www.settings.com">
-            <img src="../../public/set.png" alt="Settings Icon" class="h-5 w-5" />
-          </a>
+
+          <!-- Settings Dropdown -->
+          <div class="relative">
+            <button @click="toggleSettings" class="focus:outline-none">
+              <img src="../../public/set.png" alt="Settings Icon" class="h-5 w-5 cursor-pointer" />
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div v-if="showSettings" class="absolute right-0 mt-2 w-40 bg-white border border-gray-300 rounded-md shadow-lg">
+              <button @click="logoutUser" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</button>
+              <button @click="deleteAccount" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-100">Delete Account</button>
+            </div>
+          </div>
         </div>
       </div>
     </nav>
@@ -26,8 +36,7 @@
     <!-- Posts Section -->
     <div class="flex-1 overflow-y-auto p-4">
       <template v-for="post in posts" :key="post.id">
-        <Post :post="post" />
-
+        <Post :post="post" @like-updated="refreshPosts" @comment-added="refreshPosts" />
       </template>
     </div>
 
@@ -49,11 +58,11 @@
           <span class="text-xs text-gray-1000"></span>
         </div>
       </a>
-      <a href ="/Profile">
-      <div class="flex flex-col items-center cursor-pointer">
-        <img src="../../public/user.png" alt="Profile" class="h-6 w-6 rounded-full" />
-        <span class="text-xs text-gray-1000"></span>
-      </div>
+      <a href="/Profile">
+        <div class="flex flex-col items-center cursor-pointer">
+          <img src="../../public/user.png" alt="Profile" class="h-6 w-6 rounded-full" />
+          <span class="text-xs text-gray-1000"></span>
+        </div>
       </a>
     </nav>
 
@@ -65,7 +74,8 @@
 </template>
 
 <script>
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query } from "firebase/firestore";
+import { getAuth, signOut, deleteUser } from "firebase/auth";
 import { db } from '../config';
 import story from "../components/story.vue";
 import Post from "../components/Postview.vue";
@@ -78,11 +88,11 @@ export default {
   },
   data() {
     return {
-      posts: [], 
+      posts: [],
+      showSettings: false, // Controls dropdown visibility
     };
   },
   async created() {
-    
     await this.fetchPosts();
   },
   methods: {
@@ -90,12 +100,57 @@ export default {
       try {
         const querySnapshot = await getDocs(collection(db, "post"));
         this.posts = querySnapshot.docs.map((doc) => ({
-          id: doc.authorId,
-          ...doc.data(), 
+          id: doc.id, // Use the Firebase document ID
+          ...doc.data(),
         }));
-        console.log(this.posts)
+
+        // Initialize likes and comments arrays if they don't exist
+        this.posts = this.posts.map(post => {
+          if (!post.likes) post.likes = [];
+          if (!post.comments) post.comments = [];
+          return post;
+        });
+
+        console.log(this.posts);
       } catch (error) {
         console.error("Error fetching posts: ", error);
+      }
+    },
+
+    async refreshPosts() {
+      // Refresh posts after like or comment is updated
+      await this.fetchPosts();
+    },
+
+    toggleSettings() {
+      this.showSettings = !this.showSettings;
+    },
+
+    async logoutUser() {
+      const auth = getAuth();
+      try {
+        await signOut(auth);
+        alert("Logged out successfully!");
+        this.$router.push("/"); // Redirect to login or home page
+      } catch (error) {
+        console.error("Logout error:", error);
+      }
+    },
+
+    async deleteAccount() {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (!user) return alert("No user found");
+
+      try {
+        // Delete user from Firebase Auth
+        await deleteUser(user);
+
+        alert("Account deleted successfully!");
+        this.$router.push("/"); // Redirect to home or login page
+      } catch (error) {
+        console.error("Error deleting account:", error);
       }
     },
   },

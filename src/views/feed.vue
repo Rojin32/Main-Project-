@@ -5,21 +5,35 @@
       <input
         type="text"
         v-model="searchQuery"
-        placeholder="Search"
+        placeholder="Search for posts or profiles..."
         class="search-input"
       />
     </div>
 
+    <!-- Profile Search Results -->
+    <div v-if="showProfileResults" class="profile-results">
+      <div
+        v-for="profile in filteredProfiles"
+        :key="profile.userId"
+        class="profile-card"
+      >
+        <img :src="profile.profilePicture" alt="Profile Picture" class="profile-picture" />
+        <div class="profile-info">
+          <h3>{{ profile.name }}</h3>
+          <p>@{{ profile.username }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Feed Section -->
-    <div class="grid">
+    <div v-else class="grid">
       <div
         class="grid-item"
         v-for="(post, index) in filteredPosts"
         :key="index"
         :class="getImageClass(post.url)"
       >
-        <img :src="post.url" :alt="`Feed Image ${index + 1}`"  class="w-4 h-4"/>
-        <!--  -->
+        <img :src="post.url" :alt="`Feed Image ${index + 1}`" class="w-4 h-4" />
       </div>
     </div>
   </div>
@@ -31,21 +45,44 @@ import { getFirestore, collection, getDocs } from "firebase/firestore";
 export default {
   data() {
     return {
-      searchQuery: "", // Search query for filtering
-      posts: [], // Array to store fetched posts
+      searchQuery: "", 
+      posts: [], 
+      profiles: [], 
+      showProfileResults: false, 
     };
   },
   computed: {
-    // Filter posts based on search query
+    
     filteredPosts() {
       if (!this.searchQuery) {
-        return this.posts; // Return all posts if no search query
+        return this.posts; 
       }
       const query = this.searchQuery.toLowerCase();
-      return this.posts.filter((post) =>
-        post.description.toLowerCase().includes(query) ||
-        post.location.toLowerCase().includes(query)
-      );
+      return this.posts.filter((post) => {
+        const captionMatch = post.description?.toLowerCase().includes(query);
+        const tagMatch = post.tags?.some((tag) =>
+          tag.toLowerCase().includes(query)
+        );
+        return captionMatch || tagMatch;
+      });
+    },
+    // Filter profiles based on search query (username or name)
+    filteredProfiles() {
+      if (!this.searchQuery) {
+        return []; // Return empty array if no search query
+      }
+      const query = this.searchQuery.toLowerCase();
+      return this.profiles.filter((profile) => {
+        const usernameMatch = profile.username?.toLowerCase().includes(query);
+        const nameMatch = profile.name?.toLowerCase().includes(query);
+        return usernameMatch || nameMatch;
+      });
+    },
+  },
+  watch: {
+    // Toggle between profile and post results based on search query
+    searchQuery(newQuery) {
+      this.showProfileResults = newQuery.length > 0;
     },
   },
   methods: {
@@ -65,29 +102,35 @@ export default {
         const db = getFirestore();
         const querySnapshot = await getDocs(collection(db, "post"));
         this.posts = querySnapshot.docs.map((doc) => ({
-          id: doc.id, // Optional: Include document ID
-          ...doc.data(), // Spread the document data (url, description, location, etc.)
+          id: doc.id,
+          
+          ...doc.data(),
         }));
-        console.log(this.posts)
       } catch (error) {
-        console.log("error")
         console.error("Error fetching posts:", error);
       }
     },
-    // Format timestamp to a readable date
-    formatTimestamp(timestamp) {
-      if (!timestamp) return "Unknown Date";
-      const date = timestamp.toDate(); // Convert Firestore timestamp to JavaScript Date
-      return date.toLocaleString(); // Format as a readable string
+    // Fetch profiles from Firestore
+    async fetchProfiles() {
+      try {
+        const db = getFirestore();
+        const querySnapshot = await getDocs(collection(db, "UserDetailes"));
+        this.profiles = querySnapshot.docs.map((doc) => ({
+          userId: doc.id,
+          ...doc.data(),
+        }));
+      } catch (error) {
+        console.error("Error fetching profiles:", error);
+      }
     },
   },
-  // Fetch posts when the component is mounted
+  // Fetch posts and profiles when the component is mounted
   mounted() {
     this.fetchPosts();
+    this.fetchProfiles();
   },
 };
 </script>
-
 <style scoped>
 .feed-container {
   padding: 20px;
@@ -203,5 +246,44 @@ export default {
     margin-right: 0;
     margin-bottom: 10px;
   }
+  .profile-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.profile-card:hover {
+  transform: scale(1.02);
+}
+
+.profile-picture {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+.profile-info h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.profile-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
 }
 </style>

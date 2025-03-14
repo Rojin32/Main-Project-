@@ -34,6 +34,14 @@
       <p class="character-count">{{ 250 - caption.length }} characters remaining</p>
     </div>
 
+    
+    <div class="tags-section" v-if="tags.length > 0">
+      
+      <ul>
+        <li v-for="(tag, index) in tags" :key="index">{{ tag }}</li>
+      </ul>
+    </div>
+
     <!-- Location Input -->
     <div v-if="showLocationInput" class="location-input">
       <input type="text" v-model="location" placeholder="Enter location manually" />
@@ -44,7 +52,7 @@
     <div class="footer">
       <button class="footer-button" @click="tagPeople">
         <span class="icon">&#128100;</span>
-        <span class="text">Tag People</span>
+        <span class="text">Tag</span>
       </button>
       <button class="footer-button" @click="toggleLocationInput">
         <span class="icon">&#128205;</span>
@@ -83,7 +91,8 @@ export default {
       showLocationInput: false,
       isScheduleModalOpen: false,
       scheduledTime: "",
-      scheduledPosts: [], // Store scheduled posts locally
+      scheduledPosts: [],
+      tags: [], // Store tag details here
     };
   },
   methods: {
@@ -137,6 +146,7 @@ export default {
           location: this.location,
           url: imageUrl,
           timestamp: new Date(),
+          tags: this.tags, // Include tags in the post data
         });
 
         alert("Post uploaded successfully!");
@@ -146,7 +156,10 @@ export default {
       }
     },
     tagPeople() {
-      console.log("Tagging people...");
+      const tag = prompt("Enter the tag:");
+      if (tag) {
+        this.tags.push(tag); // Add the tag to the tags array
+      }
     },
     toggleLocationInput() {
       this.showLocationInput = !this.showLocationInput;
@@ -194,6 +207,7 @@ export default {
           location: this.location,
           url: imageUrl,
           timestamp: new Date(this.scheduledTime).toISOString(),
+          tags: this.tags, // Include tags in the scheduled post
         };
 
         // Add to local scheduledPosts array
@@ -223,6 +237,7 @@ export default {
       this.caption = "";
       this.location = "";
       this.scheduledTime = "";
+      this.tags = []; // Clear tags
     },
   },
 };
@@ -230,172 +245,162 @@ export default {
 
 <style scoped>
 .post-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-    background-color: #f5f5f5;
-    min-height: 100vh;
-  }
-  
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 20px;
-  }
-  
-  .back-button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #007bff;
-  }
-  
-  .post-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  .post-button:disabled {
-    background-color:#007bff;
-    cursor: not-allowed;
-  }
-  
-  .image-upload {
-    width: 100%;
-    height: 300px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    margin-bottom: 20px;
-    background-color: white;
-    border: 1px solid #ccc; 
-    border-radius: 5px; 
-    padding: 20px; 
-  }
-  
-  .upload-placeholder {
-    text-align: center;
-  }
-  
-  .upload-icon {
-    font-size: 48px;
-    color: #007bff;
-  }
-  
-  .upload-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  .image-preview {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-  
-  .image-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 5px;
-  }
-  
-  .remove-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .caption-input {
-    width: 100%;
-    margin-bottom: 20px;
-  }
-  
-  .caption-input textarea {
-    width: 100%;
-    height: 100px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    resize: none;
-    font-family: Arial, sans-serif;
-  }
-  
-  .character-count {
-    text-align: right;
-    font-size: 12px;
-    color: #666;
-  }
-  
-  .footer {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    padding: 15px;
-    background-color: white;
-    border-top: 1px solid #eee;
-    border-radius: 10px;
-    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-  }
-  
-  .footer-button {
-    display: flex;
-    align-items: center;
-    background: none;
-    border: none;
-    color: #007bff;
-    cursor: pointer;
-    padding: 10px;
-    border-radius: 5px;
-    transition: background-color 0.3s;
-  }
-  
-  .footer-button:hover {
-    background-color: #e9f5ff;
-  }
-  
-  .footer-button .icon {
-    margin-right: 8px;
-    font-size: 18px;
-  }
-  
-  .footer-button .text {
-    font-size: 14px;
-  }
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #007bff;
+}
+
+.post-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.post-button:disabled {
+  background-color: #007bff;
+  cursor: not-allowed;
+}
+
+.image-upload {
+  width: 100%;
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 20px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+.upload-placeholder {
+  text-align: center;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #007bff;
+}
+
+.upload-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.remove-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.caption-input {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.caption-input textarea {
+  width: 100%;
+  height: 100px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  resize: none;
+  font-family: Arial, sans-serif;
+}
+
+.character-count {
+  text-align: right;
+  font-size: 12px;
+  color: #666;
+}
+
+.tags-section {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.tags-section h3 {
+  margin-bottom: 10px;
+}
+
+.tags-section ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.tags-section li {
+  background-color: #e9f5ff;
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  display: inline-block;
+  margin-right: 5px;
+}
+
 .location-input {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
 }
+
 .location-input input {
   flex: 1;
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
+
 .location-input button {
   background-color: #007bff;
   color: white;
@@ -403,7 +408,43 @@ export default {
   padding: 10px;
   border-radius: 5px;
   cursor: pointer;
-  }
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 15px;
+  background-color: white;
+  border-top: 1px solid #eee;
+  border-radius: 10px;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.footer-button {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.footer-button:hover {
+  background-color: #e9f5ff;
+}
+
+.footer-button .icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.footer-button .text {
+  font-size: 14px;
+}
 
 .modal-overlay {
   position: fixed;
