@@ -61,7 +61,7 @@
 </a>
               <p class="text-sm font-light text-gray-500 dark:text-gray-400">
                 Don’t have an account yet?
-                <router-link to="/register" class="font-medium text-primary-600 hover:underline dark:text-primary-500">Sign up</router-link>
+                <router-link to="/thriu" class="font-medium text-primary-600 hover:underline dark:text-primary-500">Sign up</router-link>
               </p>
               <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
             </form>

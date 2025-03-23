@@ -1,15 +1,15 @@
-
 <template>
   <div class="profile-page">
-    <div class="profile-circle">
+    <div class="profile-circle" @click="openImage(user.profilePicture)">
       <img :src="user.profilePicture" alt="Profile Picture" class="profile-picture" />
     </div>
-<a href="/editProfile">
-    <div class="profile-header">
-      <h1 class="username">{{ user.username }}</h1>
-      <button class="edit-profile-button">Edit Profile</button>
-    </div>
-  </a>
+
+    <a href="/editProfile">
+      <div class="profile-header">
+        <h1 class="username">{{ user.username }}</h1>
+        <button class="edit-profile-button">Edit Profile</button>
+      </div>
+    </a>
 
     <div class="stats">
       <div class="stat">
@@ -38,12 +38,8 @@
       </button>
     </div>
 
-    <div class="add-post-section">
-      <input type="file" accept="image/*" @change="handleFileUpload" id="file-input" style="display: none" />
-    </div>
-
     <div class="content-grid">
-      <div v-for="post in user.posts" :key="post.id" class="post">
+      <div v-for="post in user.posts" :key="post.id" class="post" @click="openImage(post.image)">
         <img :src="post.image" alt="Post" class="post-image" />
       </div>
     </div>
@@ -51,14 +47,18 @@
     <div class="footer">
       <p>&copy; 2025</p>
     </div>
+
+    <!-- Fullscreen Image Viewer -->
+    <div v-if="showImageModal" class="image-modal" @click="showImageModal = false">
+      <img :src="selectedImage" class="full-image" />
+    </div>
   </div>
 </template>
 
 <script>
-import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from '../config';
 import { getAuth } from "firebase/auth";
-
 
 export default {
   data() {
@@ -75,19 +75,19 @@ export default {
       },
       tabs: ["Posts", "Tagged"],
       activeTab: "Posts",
+      showImageModal: false,
+      selectedImage: "",
     };
   },
   async created() {
     await this.fetchUserDetails();
   },
   methods: {
-    // Fetch user details and specific posts
     async fetchUserDetails() {
       try {
-        const userId = localStorage.getItem("id"); // Get logged-in user ID
+        const userId = localStorage.getItem("id"); 
         if (!userId) return console.log("User ID not found");
 
-        // Fetch user details from Firestore
         const docRef = doc(db, "UserDetailes", userId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -102,84 +102,48 @@ export default {
             posts: [],
           };
 
-          // Fetch user-specific posts
           await this.fetchUserPosts(userId);
         } else {
           console.log("No such user document!");
-          
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
     },
 
-
     async fetchUserPosts(userId) {
-  try {
-    console.log("Fetching posts for user:", userId);
-    const auth = getAuth();
-    const user = auth.currentUser;
+      try {
+        console.log("Fetching posts for user:", userId);
+        const auth = getAuth();
+        const user = auth.currentUser;
 
-    // Query Firestore for posts by userId
-    const postsQuery = query(collection(db, "post"), where("authorId", "==", user.uid));
-    const querySnapshot = await getDocs(postsQuery);
+        const postsQuery = query(collection(db, "post"), where("authorId", "==", user.uid));
+        const querySnapshot = await getDocs(postsQuery);
 
-    // Ensure there are documents
-    if (querySnapshot.empty) {
-      console.log("No posts found for this user.");
-      this.user.posts = [];
-      this.user.postsCount = 0;
-      return;
-    }
+        if (querySnapshot.empty) {
+          console.log("No posts found for this user.");
+          this.user.posts = [];
+          this.user.postsCount = 0;
+          return;
+        }
 
-    // Extract posts
-    const userPosts = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      image: doc.data().url, // Use "url" instead of "image"
-    }));
+        const userPosts = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          image: doc.data().url,
+        }));
 
-    // Store posts in component state
-    this.user.posts = userPosts;
-    this.user.postsCount = userPosts.length;
+        this.user.posts = userPosts;
+        this.user.postsCount = userPosts.length;
 
-    console.log("Fetched posts:", userPosts);
-  } catch (error) {
-    console.error("Error fetching user posts:", error);
-  }
-},
-
-    // Handle image upload and store it in Firestore
-    async handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (file && file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          try {
-            const userId = localStorage.getItem("id");
-            if (!userId) return alert("User not logged in");
-
-            const newPost = {
-              userId: userId,
-              image: e.target.result,
-            };
-
-            // Save post to Firestore
-            const docRef = await addDoc(collection(db, "Posts"), newPost);
-
-            // Update local posts array
-            this.user.posts.push({ id: docRef.id, image: newPost.image });
-            this.user.postsCount++;
-
-            alert("Post uploaded successfully!");
-          } catch (error) {
-            console.error("Error uploading post:", error);
-            alert("Failed to upload post.");
-          }
-        };
-        reader.readAsDataURL(file);
-      } else {
-        alert("Please upload a valid image file.");
+        console.log("Fetched posts:", userPosts);
+      } catch (error) {
+        console.error("Error fetching user posts:", error);
       }
+    },
+
+    openImage(imageUrl) {
+      this.selectedImage = imageUrl;
+      this.showImageModal = true;
     }
   }
 };
@@ -202,6 +166,7 @@ export default {
   overflow: hidden;
   border: 3px solid #007bff;
   margin-bottom: 20px;
+  cursor: pointer;
 }
 
 .profile-picture {
@@ -302,12 +267,31 @@ export default {
   aspect-ratio: 1;
   overflow: hidden;
   background-color: white;
+  cursor: pointer;
 }
 
 .post-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.full-image {
+  max-width: 90%;
+  max-height: 90%;
 }
 
 .footer {

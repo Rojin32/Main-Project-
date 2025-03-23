@@ -8,14 +8,19 @@
         placeholder="Search for posts or profiles..."
         class="search-input"
       />
+      <div class="search-buttons">
+        <button @click="setSearchMode('feed')" :class="{ active: searchMode === 'feed' }">Feed</button>
+        <button @click="setSearchMode('profile')" :class="{ active: searchMode === 'profile' }">Profiles</button>
+      </div>
     </div>
 
     <!-- Profile Search Results -->
-    <div v-if="showProfileResults" class="profile-results">
+    <div v-if="searchMode === 'profile' && showProfileResults" class="profile-results">
       <div
         v-for="profile in filteredProfiles"
         :key="profile.userId"
         class="profile-card"
+        @click="navigateToProfile(profile.userId)"
       >
         <img :src="profile.profilePicture" alt="Profile Picture" class="profile-picture" />
         <div class="profile-info">
@@ -26,7 +31,7 @@
     </div>
 
     <!-- Feed Section -->
-    <div v-else class="grid">
+    <div v-else-if="searchMode === 'feed'" class="grid">
       <div
         class="grid-item"
         v-for="(post, index) in filteredPosts"
@@ -37,24 +42,56 @@
       </div>
     </div>
   </div>
+  <!-- Bottom Navigation Bar -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white shadow-md py-4 h-17 flex justify-between items-center px-10 rounded-t-xl">
+    <a href="/first">
+      <div class="flex flex-col items-center cursor-pointer">
+        <img src="../../public/home.png" alt="Profile" class="h-5 w-5 rectangle-full" />
+        <span class="text-xs text-gray-1000"></span>
+      </div>
+      </a>
+      <a href="/feed">
+        <div class="flex flex-col items-center cursor-pointer">
+          <img src="../../public/search.png" alt="Profile" class="h-5 w-5 rectangle-full" />
+          <span class="text-xs text-gray-1000"></span>
+        </div>
+      </a>
+      <a href="/message">
+        <div class="flex flex-col items-center cursor-pointer">
+          <img src="../../public/chat.png" alt="Profile" class="h-5 w-5 rectangle-full" />
+          <span class="text-xs text-gray-1000"></span>
+        </div>
+      </a>
+      <a href="/Profile">
+        <div class="flex flex-col items-center cursor-pointer">
+          <img src="../../public/user.png" alt="Profile" class="h-6 w-6 rounded-full" />
+          <span class="text-xs text-gray-1000"></span>
+        </div>
+      </a>
+    </nav>
 </template>
 
 <script>
 import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { useRouter } from 'vue-router';
 
 export default {
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
   data() {
     return {
       searchQuery: "", 
       posts: [], 
       profiles: [], 
       showProfileResults: false, 
+      searchMode: 'profile', // Default search mode
     };
   },
   computed: {
-    
     filteredPosts() {
-      if (!this.searchQuery) {
+      if (!this.searchQuery || this.searchMode !== 'feed') {
         return this.posts; 
       }
       const query = this.searchQuery.toLowerCase();
@@ -66,10 +103,9 @@ export default {
         return captionMatch || tagMatch;
       });
     },
-    // Filter profiles based on search query (username or name)
     filteredProfiles() {
-      if (!this.searchQuery) {
-        return []; // Return empty array if no search query
+      if (!this.searchQuery || this.searchMode !== 'profile') {
+        return []; // Return empty array if no search query or not in profile mode
       }
       const query = this.searchQuery.toLowerCase();
       return this.profiles.filter((profile) => {
@@ -80,13 +116,15 @@ export default {
     },
   },
   watch: {
-    // Toggle between profile and post results based on search query
     searchQuery(newQuery) {
       this.showProfileResults = newQuery.length > 0;
     },
   },
   methods: {
-    // Determine the class for the image based on its URL
+    navigateToProfile(userId) {
+      console.log("Navigating to profile with ID:", userId); // Debugging log
+      this.router.push(`/UserProfile/${userId}`);
+    },
     getImageClass(imageUrl) {
       if (imageUrl.includes("portrait")) {
         return "portrait"; // Portrait images span 2 rows
@@ -96,21 +134,18 @@ export default {
         return "square"; // Square images span 1 row and 1 column
       }
     },
-    // Fetch posts from Firestore
     async fetchPosts() {
       try {
         const db = getFirestore();
         const querySnapshot = await getDocs(collection(db, "post"));
         this.posts = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          
           ...doc.data(),
         }));
       } catch (error) {
         console.error("Error fetching posts:", error);
       }
     },
-    // Fetch profiles from Firestore
     async fetchProfiles() {
       try {
         const db = getFirestore();
@@ -123,14 +158,17 @@ export default {
         console.error("Error fetching profiles:", error);
       }
     },
+    setSearchMode(mode) {
+      this.searchMode = mode;
+    },
   },
-  // Fetch posts and profiles when the component is mounted
   mounted() {
     this.fetchPosts();
     this.fetchProfiles();
   },
 };
 </script>
+
 <style scoped>
 .feed-container {
   padding: 20px;
@@ -153,6 +191,25 @@ export default {
   margin-right: 60px;
   margin-left: auto;
   height: 50px;
+}
+
+.search-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.search-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #e0e0e0;
+  transition: background-color 0.3s ease;
+}
+
+.search-buttons button.active {
+  background-color:#6CB4EE;
+  color: white;
 }
 
 /* Grid Layout */
@@ -222,6 +279,49 @@ export default {
   grid-column: span 1;
 }
 
+/* Profile Results */
+.profile-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.profile-card:hover {
+  transform: scale(1.02);
+  background-color: #f5f5f5;
+}
+
+.profile-picture {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+.profile-info h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.profile-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .grid {
@@ -246,44 +346,5 @@ export default {
     margin-right: 0;
     margin-bottom: 10px;
   }
-  .profile-results {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.profile-card {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-}
-
-.profile-card:hover {
-  transform: scale(1.02);
-}
-
-.profile-picture {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  margin-right: 15px;
-}
-
-.profile-info h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.profile-info p {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
-}
 }
 </style>

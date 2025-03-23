@@ -10,7 +10,7 @@
       <form @submit.prevent="updateProfile">
         <div class="mb-4">
           <label class="block text-gray-700">Username</label>
-          <input v-model="userData.username" type="text" class="w-full p-2 border rounded" required />
+          <input v-model="userData.username" type="text" class="w-full p-2 border rounded"  />
         </div>
   
         <div class="mb-4">
@@ -20,7 +20,7 @@
   
         <div class="mb-4">
           <label class="block text-gray-700">Phone Number</label>
-          <input v-model="userData.mobile" type="tel" class="w-full p-2 border rounded" required />
+          <input v-model="userData.mobile" type="tel" class="w-full p-2 border rounded"  />
         </div>
   
         <div class="mb-4">
