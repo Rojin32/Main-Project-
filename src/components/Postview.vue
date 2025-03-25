@@ -145,6 +145,7 @@ export default {
           const postData = postSnapshot.data();
           if (postData.comments) {
             comments.value = postData.comments;
+            console.log("coment is comming",comments)
           }
         }
       } catch (error) {

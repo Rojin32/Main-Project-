@@ -1,121 +1,84 @@
 <template>
-    <div class="profile-container" v-if="userProfile">
-      <!-- Profile Header -->
-      <div class="profile-header">
-        <div class="profile-cover">
-          
-        </div>
-        
-        <div class="profile-info-container">
-          <div class="profile-picture-container">
-            <img 
-              :src="userProfile.profilePicture || '/default-avatar.jpg'" 
-              alt="Profile Picture" 
-              class="profile-picture" 
-            />
-          </div>
-          
-          <div class="profile-details">
-            <div class="profile-name-section">
-              <h1 class="profile-name">{{ userProfile.name }}</h1>
-              <p class="profile-username">@{{ userProfile.username }}</p>
-            </div>
-            
-            <div class="profile-stats">
-              <div class="stat-item">
-                <span class="stat-count">{{ userProfile.postCount || 0 }}</span>
-                <span class="stat-label">Posts</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-count">{{ userProfile.followers?.length || 0 }}</span>
-                <span class="stat-label">Followers</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-count">{{ userProfile.following?.length || 0 }}</span>
-                <span class="stat-label">Following</span>
-              </div>
-            </div>
-            
-            <div class="profile-bio" v-if="userProfile.bio">
-              <p>{{ userProfile.bio }}</p>
-            </div>
-            
-            <div class="profile-actions">
-              <button 
-                v-if="!isCurrentUser" 
-                @click="toggleFollow" 
-                :class="['follow-button', isFollowing ? 'following' : '']"
-              >
-                {{ isFollowing ? 'Following' : 'Follow' }}
-              </button>
-              <button v-if="!isCurrentUser" class="message-button">
-                Message
-              </button>
-              <button v-if="isCurrentUser" class="edit-profile-button">
-                Edit Profile
-              </button>
-            </div>
-          </div>
-        </div>
+  <div class="profile-page" v-if="userProfile">
+    <div class="profile-circle" @click="openImage(userProfile.profilePicture || '/default-avatar.jpg')">
+      <img :src="userProfile.profilePicture || '/default-avatar.jpg'" alt="Profile Picture" class="profile-picture" />
+    </div>
+
+    <div class="profile-header">
+      <h1 class="username">{{ userProfile.username }}</h1>
+      <button 
+        v-if="!isCurrentUser" 
+        @click="toggleFollow" 
+        :class="['edit-profile-button', isFollowing ? 'following' : '']"
+      >
+        {{ isFollowing ? 'Following' : 'Follow' }}
+      </button>
+      <button v-if="isCurrentUser" class="edit-profile-button" @click="editProfile">
+        Edit Profile
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="count">{{ userProfile.postCount || 0 }}</span>
+        <span class="label">Posts</span>
       </div>
-      
-      <!-- Profile Content -->
-      <div class="profile-content">
-        <div class="content-tabs">
-          <button 
-            class="tab-button" 
-            :class="{ active: activeTab === 'posts'}"
-            @click="activeTab = 'posts'"
-          >
-            Posts
-          </button>
-          
-        </div>
-        
-        <!-- Posts Grid -->
-        <div v-if="activeTab === 'posts'" class="posts-grid">
-          <div v-if="userPosts.length === 0" class="no-posts">
-            <p>No posts yet</p>
-          </div>
-          <div 
-            v-for="post in userPosts" 
-            :key="post.id" 
-            class="post-item"
-            @click="viewPost(post.id)"
-          >
-            <img :src="post.url" :alt="post.description" class="post-image" />
-          </div>
-        </div>
-        
-        <!-- Saved Posts -->
-        <div v-else-if="activeTab === 'saved'" class="posts-grid">
-          <div v-if="savedPosts.length === 0" class="no-posts">
-            <p>No saved posts</p>
-          </div>
-          <div 
-            v-for="post in savedPosts" 
-            :key="post.id" 
-            class="post-item"
-            @click="viewPost(post.id)"
-          >
-            <img :src="post.url" :alt="post.description" class="post-image" />
-          </div>
-        </div>
+      <div class="stat">
+        <span class="count">{{ userProfile.followers?.length || 0 }}</span>
+        <span class="label">Followers</span>
+      </div>
+      <div class="stat">
+        <span class="count">{{ userProfile.following?.length || 0 }}</span>
+        <span class="label">Following</span>
       </div>
     </div>
-    
+
+    <div class="bio-section">
+      <p class="bio">{{ userProfile.bio || 'No bio available' }}</p>
+      <a :href="userProfile.website" class="website-link" v-if="userProfile.website">{{ userProfile.website }}</a>
+    </div>
+
+    <div class="tabs">
+      <button 
+        v-for="tab in tabs" 
+        :key="tab" 
+        :class="['tab-button', { active: activeTab === tab }]"
+        @click="activeTab = tab"
+      >
+        {{ tab }}
+      </button>
+    </div>
+
+    <div class="content-grid">
+      <div 
+        v-for="post in activePosts" 
+        :key="post.id" 
+        class="post" 
+        @click="viewPost(post.id)"
+      >
+        <img :src="post.url" :alt="post.description" class="post-image" />
+      </div>
+    </div>
+
     <!-- Loading State -->
-    <div v-else-if="loading" class="loading-container">
+    <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>Loading profile...</p>
     </div>
-    
-    <!-- Error State -->
-    <div v-else class="error-container">
-      <p>User not found</p>
-      <button @click="goBack" class="back-button">Go Back</button>
+
+    <!-- Fullscreen Image Viewer -->
+    <div v-if="showImageModal" class="image-modal" @click="showImageModal = false">
+      <img :src="selectedImage" class="full-image" />
     </div>
-  </template>
+  </div>
+
+  <!-- Error State -->
+  <div v-else-if="!loading" class="error-container">
+    <p>User not found</p>
+    <button @click="goBack" class="back-button">Go Back</button>
+  </div>
+</template>
+
 <script>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -135,15 +98,22 @@ export default {
     const userPosts = ref([]);
     const savedPosts = ref([]);
     const loading = ref(true);
-    const activeTab = ref('posts');
+    const activeTab = ref('Posts');
     const currentUserId = ref('');
     const isFollowing = ref(false);
-    
+    const showImageModal = ref(false);
+    const selectedImage = ref('');
+    const tabs = ref(['Posts', 'Saved']);
+
     // Computed properties
     const isCurrentUser = computed(() => {
       return userId.value === currentUserId.value;
     });
-    
+
+    const activePosts = computed(() => {
+      return activeTab.value === 'Posts' ? userPosts.value : savedPosts.value;
+    });
+
     // Methods
     const fetchUserProfile = async () => {
       try {
@@ -231,64 +201,73 @@ export default {
     };
     
     const toggleFollow = async () => {
-  try {
-    if (!auth.currentUser) {
-      // Redirect to login or show login modal
-      return;
-    }
-    
-    const currentUserRef = doc(db, "UserDetailes", currentUserId.value);
-    const targetUserRef = doc(db, "UserDetailes", userId.value);
-    
-    if (isFollowing.value) {
-      // Unfollow
-      await updateDoc(currentUserRef, {
-        following: arrayRemove(userId.value)
-      });
-      
-      await updateDoc(targetUserRef, {
-        followers: arrayRemove(currentUserId.value)
-      });
-      
-      isFollowing.value = false;
-    } else {
-      // Follow
-      await updateDoc(currentUserRef, {
-        following: arrayUnion(userId.value)
-      });
-      
-      await updateDoc(targetUserRef, {
-        followers: arrayUnion(currentUserId.value)
-      });
-      
-      isFollowing.value = true;
-    }
-    
-    // Update followers count in UI
-    if (userProfile.value) {
-      if (!userProfile.value.followers) {
-        userProfile.value.followers = [];
+      try {
+        if (!auth.currentUser) {
+          // Redirect to login or show login modal
+          return;
+        }
+        
+        const currentUserRef = doc(db, "UserDetailes", currentUserId.value);
+        const targetUserRef = doc(db, "UserDetailes", userId.value);
+        
+        if (isFollowing.value) {
+          // Unfollow
+          await updateDoc(currentUserRef, {
+            following: arrayRemove(userId.value)
+          });
+          
+          await updateDoc(targetUserRef, {
+            followers: arrayRemove(currentUserId.value)
+          });
+          
+          isFollowing.value = false;
+        } else {
+          // Follow
+          await updateDoc(currentUserRef, {
+            following: arrayUnion(userId.value)
+          });
+          
+          await updateDoc(targetUserRef, {
+            followers: arrayUnion(currentUserId.value)
+          });
+          
+          isFollowing.value = true;
+        }
+        
+        // Update followers count in UI
+        if (userProfile.value) {
+          if (!userProfile.value.followers) {
+            userProfile.value.followers = [];
+          }
+          
+          if (isFollowing.value) {
+            userProfile.value.followers.push(currentUserId.value);
+          } else {
+            userProfile.value.followers = userProfile.value.followers.filter(
+              id => id !== currentUserId.value
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error toggling follow:", error);
       }
-      
-      if (isFollowing.value) {
-        userProfile.value.followers.push(currentUserId.value);
-      } else {
-        userProfile.value.followers = userProfile.value.followers.filter(
-          id => id !== currentUserId.value
-        );
-      }
-    }
-  } catch (error) {
-    console.error("Error toggling follow:", error);
-  }
-};
+    };
     
     const viewPost = (postId) => {
       router.push(`/post/${postId}`);
     };
+
+    const openImage = (imageUrl) => {
+      selectedImage.value = imageUrl;
+      showImageModal.value = true;
+    };
     
     const goBack = () => {
       router.back();
+    };
+
+    const editProfile = () => {
+      router.push('/editProfile');
     };
     
     // Lifecycle hooks
@@ -312,221 +291,160 @@ export default {
       savedPosts,
       loading,
       activeTab,
+      tabs,
+      activePosts,
       isCurrentUser,
       isFollowing,
+      showImageModal,
+      selectedImage,
       toggleFollow,
       viewPost,
-      goBack
+      openImage,
+      goBack,
+      editProfile
     };
   }
 };
 </script>
+
 <style scoped>
-.profile-container {
-  max-width: 935px;
-  margin: 0 auto;
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
 }
 
-/* Profile Header */
-.profile-header {
-  margin-bottom: 44px;
-  position: relative;
-}
-
-.profile-cover {
-  height: 300px;
+.profile-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
   overflow: hidden;
-  border-radius: 12px;
-  background-color: #f0f0f0;
+  border: 3px solid #007bff;
+  margin-bottom: 20px;
+  cursor: pointer;
 }
 
-.cover-image {
+.profile-picture {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.profile-info-container {
-  display: flex;
-  align-items: flex-start;
-  padding: 20px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  margin-top: -80px;
-  position: relative;
-  z-index: 1;
-}
-
-.profile-picture-container {
-  margin-right: 30px;
-  margin-top: -60px;
-}
-
-.profile-picture {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  border: 4px solid white;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.profile-details {
-  flex: 1;
-}
-
-.profile-name-section {
-  margin-bottom: 20px;
-}
-
-.profile-name {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0;
-  color: #333;
-}
-
-.profile-username {
-  font-size: 16px;
-  color: #666;
-  margin: 5px 0 0;
-}
-
-.profile-stats {
-  display: flex;
-  gap: 30px;
-  margin-bottom: 20px;
-}
-
-.stat-item {
+.profile-header {
   text-align: center;
-}
-
-.stat-count {
-  font-size: 20px;
-  font-weight: 700;
-  display: block;
-  color: #333;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-}
-
-.profile-bio {
   margin-bottom: 20px;
-  font-size: 16px;
-  line-height: 1.6;
-  color: #444;
-}
 
-.profile-actions {
-  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.follow-button, .message-button, .edit-profile-button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.username {
+  font-size: 24px;
+  margin: 10px 0;
 }
 
-.follow-button {
-  background-color: #0095f6;
+.edit-profile-button {
+  background-color: #007bff;
   color: white;
   border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.follow-button.following {
+.edit-profile-button.following {
   background-color: #efefef;
   color: #333;
 }
 
-.follow-button:hover {
-  background-color: #0081d6;
-}
-
-.follow-button.following:hover {
+.edit-profile-button.following:hover {
   background-color: #ff3b30;
   color: white;
 }
 
-.message-button {
-  background-color: #efefef;
-  color: #333;
-  border: none;
-}
-
-.message-button:hover {
-  background-color: #e0e0e0;
-}
-
-.edit-profile-button {
-  background-color: #efefef;
-  color: #333;
-  border: none;
-}
-
-.edit-profile-button:hover {
-  background-color: #e0e0e0;
-}
-
-/* Profile Content */
-.profile-content {
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-top: 20px;
-}
-
-.content-tabs {
+.stats {
   display: flex;
-  border-bottom: 1px solid #dbdbdb;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.count {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.label {
+  font-size: 14px;
+  color: #666;
+}
+
+.bio-section {
+  text-align: center;
+  margin-bottom: 20px;
+  max-width: 400px;
+}
+
+.bio {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.website-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 20px;
 }
 
 .tab-button {
-  flex: 1;
-  padding: 16px;
   background: none;
   border: none;
+  padding: 10px;
   font-size: 16px;
-  font-weight: 600;
-  color: #666;
   cursor: pointer;
-  transition: all 0.2s ease;
+  color: #666;
 }
 
 .tab-button.active {
-  color: #0095f6;
-  border-bottom: 2px solid #0095f6;
+  color: #007bff;
+  border-bottom: 2px solid #007bff;
 }
 
-.tab-button:hover {
-  color: #0095f6;
-}
-
-/* Posts Grid */
-.posts-grid {
-  display: grid;
+.content-grid{
+  display:grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  padding: 4px;
+  gap: 2px;
+  width: 100%;
+  
+
 }
 
-.post-item {
-  aspect-ratio: 1/1;
+.post {
+  width: 100%;
+  aspect-ratio: 1;
   overflow: hidden;
-  position: relative;
+  background-color: white;
   cursor: pointer;
-  border-radius: 8px;
-  background-color: #f0f0f0;
+  position: relative;
+  border:2px solid gray;
 }
 
 .post-image {
@@ -536,14 +454,8 @@ export default {
   transition: transform 0.2s ease;
 }
 
-.post-item:hover .post-image {
+.post:hover .post-image {
   transform: scale(1.1);
-}
-
-.no-posts {
-  text-align: center;
-  padding: 40px;
-  color: #666;
 }
 
 /* Loading State */
@@ -587,5 +499,25 @@ export default {
 
 .back-button:hover {
   background-color: #0081d6;
+}
+
+/* Image Modal */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.full-image {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
 }
 </style>

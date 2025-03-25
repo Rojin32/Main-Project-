@@ -38,7 +38,7 @@
         :key="index"
         :class="getImageClass(post.url)"
       >
-        <img :src="post.url" :alt="`Feed Image ${index + 1}`" class="w-4 h-4" />
+        <img :src="post.url" :alt="`Feed Image ${index + 1}`" class="w-4 h-4"  />
       </div>
     </div>
   </div>
